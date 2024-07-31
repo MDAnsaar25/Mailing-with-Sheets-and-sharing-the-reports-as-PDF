@@ -1,0 +1,173 @@
+//Paid Script
+
+function sendEmailsWithPDF() {
+  var sheetName = "US Paid July Audit"; // Replace with the name of your sheet
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    Logger.log("Sheet not found!");
+    return;
+  }
+  
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0]; // Get the headers from the first row
+  
+  // Replace 'YOUR_LOGO_FILE_ID' with the ID of your logo file in Google Drive
+  var logoFileId = '1ivEaue-PKjWGSFxzm4hTab8bwqlS0RiT';
+  var staticCCEmail = "rasheedakesury@brightchamps.com"; // Replace with your static email address
+  
+  for (var i = 1; i < data.length; i++) {
+    var teacherName = data[i][0];
+    var teacherEmail = data[i][2];
+    var teamLeadEmail = data[i][3];
+    
+    // Check if the row is empty (i.e., if teacherName, teacherEmail, or teamLeadEmail is missing)
+    if (!teacherName || !teacherEmail || !teamLeadEmail) {
+      Logger.log("Incomplete data in row " + (i + 1));
+      continue; // Skip this row if any of the required data is missing
+    }
+    
+    // Check if email has already been sent
+    if (data[i][27] === "Email Sent") {
+      Logger.log("Email already sent for row " + (i + 1));
+      continue; // Skip this row if email has already been sent
+    }
+    
+    var subject = "Paid US Report";
+    var body = "<p>Dear " + teacherName + ",</p><p>In the ever-evolving landscape of education, we find ourselves presented with unique challenges that also serve as opportunities for growth and transformation.</p><p>We've wanted to share audit feedback regarding your recent class and wish to align with you to enhance the experience. While acknowledging your commendable efforts, we believe sharing this feedback will assist you in maintaining vigilance across all sessions.</p><p>We kindly request your utmost attention and dedication to ensure that every student who attends your classes leaves with a genuine excitement for their learning journey. Your role as an educator is paramount in inspiring and fostering a positive and impactful educational experience for our students.</p><p>Audit Report is attached below</p><p>Your consistent efforts in class are truly appreciated! Keep shining brightly and giving your best.</p><p><strong><span style='color:red;'>Note: Please ensure compliance with all protocols, as repeated lapses may result in corrective action based on performance.</span></strong></p><p>Kindly acknowledge receipt of this email.</p><strong>Regards,</strong><br><strong>Academy Ops</strong>";
+
+    // Create a temporary Google Doc
+    var doc = DocumentApp.create("Report");
+    var docBody = doc.getBody();
+    
+    // Add centered logo at the top of the document
+    var logoBlob = DriveApp.getFileById(logoFileId).getBlob();
+    var logoImage = docBody.appendImage(logoBlob);
+    logoImage.setWidth(200); // Set the desired width
+    logoImage.setHeight(200); // Set the desired height
+    var logoParagraph = logoImage.getParent();
+    logoParagraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    
+    // Add title "PAID AUDIT REPORT" in bold and centered
+    var titleParagraph = docBody.appendParagraph("PAID AUDIT REPORT");
+    titleParagraph.setBold(true);
+    titleParagraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+    // Add a table for columns A to K
+    var table1 = docBody.appendTable();
+    for (var col = 0; col <= 10; col++) {
+      // Skip columns G and H (index 6 and 7)
+      if (col == 6 || col == 7) {
+        continue;
+      }
+
+      if (headers[col] !== undefined) {
+        var headerText = headers[col] + ": ";
+        var valueText = data[i][col] ? data[i][col].toString() : '';
+        
+        // Format the slot time (assuming column J is index 9)
+        if (col == 9 && valueText) {
+          var date = new Date(valueText);
+          valueText = Utilities.formatDate(date, Session.getScriptTimeZone(), "H:mm");
+        }
+
+        // Format the date (assuming column K is index 10)
+        if (col == 10 && valueText) {
+          var date = new Date(valueText);
+          valueText = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        }
+        
+        var row = table1.appendTableRow();
+        row.appendTableCell(headerText).setBackgroundColor("#93908F").setForegroundColor("#FFFFFF").setBold(true);
+        row.appendTableCell(valueText).setBackgroundColor("#93908F").setForegroundColor("#000000");
+      }
+    }
+
+    // Add title "PAID AUDIT PARAMETERS" in bold, capital letters, and centered
+    var parametersTitleParagraph = docBody.appendParagraph("PAID AUDIT PARAMETERS");
+    parametersTitleParagraph.setBold(true);
+    parametersTitleParagraph.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+    // Add a table for columns L to AA
+    var table2 = docBody.appendTable();
+    for (var col = 11; col <= 26; col++) {
+      if (headers[col] !== undefined) {
+        var headerText = headers[col] + ": ";
+        var valueText = data[i][col] ? data[i][col].toString() : '';
+
+        var row = table2.appendTableRow();
+        row.appendTableCell(headerText).setBackgroundColor("#93908F").setForegroundColor("#FFFFFF").setBold(true);
+        row.appendTableCell(valueText).setBackgroundColor("#93908F").setForegroundColor("#000000");
+      }
+    }
+
+    // Add the note in red color and bold font
+    var noteParagraph = docBody.appendParagraph('NOTE : Please ensure compliance with all protocols, as repeated lapses may result in corrective action based on performance.');
+    noteParagraph.setForegroundColor('#FF0000'); // Set color to red
+    noteParagraph.setBold(true); // Set font to bold
+
+    // Add one line break before the previous line
+    docBody.appendParagraph('');
+
+    // Add the final line in blue color font
+    var finalLine = docBody.appendParagraph('Teachers are encouraged to embrace feedback as a tool for enhancing classroom quality, using it constructively to elevate future sessions with care and dedication.');
+    finalLine.setForegroundColor('#0000FF'); // Set color to blue
+
+    // Add one line break before Happy Teaching and Audit Team
+    docBody.appendParagraph('');
+
+    // Add Happy Teaching in black bold font
+    var happyTeaching = docBody.appendParagraph('Happy Teaching!');
+    happyTeaching.setForegroundColor('#000000'); // Set color to black
+    happyTeaching.setBold(true); // Set font to bold
+
+    // Add one line break
+    docBody.appendParagraph('');
+
+    // Add Audit Team, BrightCHAMPS in black bold font
+    var auditTeam = docBody.appendParagraph('Audit Team, BrightCHAMPS');
+    auditTeam.setForegroundColor('#000000'); // Set color to black
+    auditTeam.setBold(true); // Set font to bold
+
+    doc.saveAndClose();
+
+    // Convert the Google Doc to PDF
+    var pdf = DriveApp.getFileById(doc.getId()).getAs('application/pdf');
+
+    // Delete the temporary Google Doc
+    DriveApp.getFileById(doc.getId()).setTrashed(true);
+
+    // Send email with PDF attachment to teacher
+    var emailSent = false;
+    try {
+      MailApp.sendEmail({
+        to: teacherEmail,
+        //cc: staticCCEmail, // Add static email to cc
+        subject: subject,
+        htmlBody: body,
+        attachments: [pdf]
+      });
+      emailSent = true;
+    } catch (error) {
+      Logger.log("Error sending email: " + error.toString());
+    }
+    
+    // If email is sent successfully, update status in column AB
+    if (emailSent) {
+      sheet.getRange(i + 1, 28).setValue("Email Sent"); // Column AB is 28th column (index 27)
+      SpreadsheetApp.flush(); // Ensure the changes are written to the sheet
+    }
+    
+    // Send email with PDF attachment to team lead
+    try {
+      MailApp.sendEmail({
+        to: teamLeadEmail,
+        cc: staticCCEmail, // Add static email to cc
+        subject: subject,
+        htmlBody: body,
+        attachments: [pdf]
+      });
+    } catch (error) {
+      Logger.log("Error sending email to team lead: " + error.toString());
+    }
+  }
+}
